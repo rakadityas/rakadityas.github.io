@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sips -g pixelWidth -g pixelHeight profile.png)",
+      "Bash(sips -s format jpeg -s formatOptions 82 profile.png --out profile.jpg)",
+      "Bash(rm profile.png)"
+    ]
+  }
+}
