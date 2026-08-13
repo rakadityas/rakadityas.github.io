@@ -336,6 +336,13 @@ img { max-width: 100%; display: block; }
   font-size: clamp(42px, 6vw, 68px);
   line-height: 1.03;
   letter-spacing: -.02em;
+  margin: 0 0 10px;
+}
+
+.hero-handle {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--ink-faint);
   margin: 0 0 24px;
 }
 
