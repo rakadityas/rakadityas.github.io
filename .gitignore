@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# Editor / tooling
+.vscode/
+.idea/
+
+# Backups & scratch
+*.bak
+*.bak[0-9]
+*~
+
+# Personal source notes — not for the public repo
+achievement.txt
