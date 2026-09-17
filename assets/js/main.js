@@ -180,6 +180,21 @@
     }
   }
 
+  /* ---------- Reveal stagger ----------
+     Siblings arrive one after another instead of all at once. The index is
+     per-parent so each section restarts its count, and it is capped so a long
+     list never ends with a visible wait. One pass at load; the delay itself
+     lives in CSS. */
+  {
+    const seen = new Map();
+    revealEls.forEach((el) => {
+      const parent = el.parentElement;
+      const n = seen.get(parent) || 0;
+      seen.set(parent, n + 1);
+      if (n) el.style.setProperty('--i', String(Math.min(n, 6)));
+    });
+  }
+
   /* ---------- Derived values ---------- */
   const CAREER_START = new Date(2018, 2); // March 2018
 

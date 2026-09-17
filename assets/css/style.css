@@ -840,9 +840,273 @@ img { max-width: 100%; display: block; }
   .tag:hover { transform: none; }
 }
 
+/* =========================================================
+   Material, depth & motion
+   ---------------------------------------------------------
+   The rules below are presentation only. Two constraints
+   shape all of them:
+
+   · Restraint. Depth comes from light — a hairline at the
+     top edge, a soft shadow below — not from colour. Motion
+     is short, single-direction and never overshoots.
+   · Cost. Only opacity and transform are animated, so the
+     compositor handles every frame. The one blurred surface
+     on the page is the nav; the background wash is a static
+     gradient, painted once.
+   ========================================================= */
+
+:root {
+  /* A decelerating curve with no bounce: things arrive and stop. */
+  --ease-out: cubic-bezier(.32,.72,0,1);
+  --ease-soft: cubic-bezier(.4,0,.2,1);
+
+  /* Elevation: a bright top edge, then shadow that widens with height. */
+  --edge: inset 0 1px 0 rgba(255,255,255,.7);
+  --e1: 0 1px 2px rgba(17,17,20,.05), 0 1px 1px rgba(17,17,20,.03);
+  --e2: 0 2px 4px rgba(17,17,20,.05), 0 8px 16px -8px rgba(17,17,20,.12);
+  --e3: 0 4px 8px rgba(17,17,20,.06), 0 20px 36px -16px rgba(17,17,20,.2);
+}
+
+:root[data-theme="dark"] {
+  --edge: inset 0 1px 0 rgba(255,255,255,.08);
+  --e1: 0 1px 2px rgba(0,0,0,.4);
+  --e2: 0 2px 6px rgba(0,0,0,.45), 0 10px 20px -10px rgba(0,0,0,.6);
+  --e3: 0 4px 10px rgba(0,0,0,.5), 0 24px 44px -20px rgba(0,0,0,.75);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --edge: inset 0 1px 0 rgba(255,255,255,.08);
+    --e1: 0 1px 2px rgba(0,0,0,.4);
+    --e2: 0 2px 6px rgba(0,0,0,.45), 0 10px 20px -10px rgba(0,0,0,.6);
+    --e3: 0 4px 10px rgba(0,0,0,.5), 0 24px 44px -20px rgba(0,0,0,.75);
+  }
+}
+
+/* ---------- Ground ----------
+   Two very faint washes in the page's own hues, fixed and static. It reads as
+   a tinted sheet of paper rather than a gradient; nothing animates, so this
+   costs one paint for the life of the page. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(58% 44% at 12% -4%,  color-mix(in srgb, var(--red) 6%, transparent), transparent 72%),
+    radial-gradient(54% 40% at 92% 6%,   color-mix(in srgb, var(--blue) 6%, transparent), transparent 72%),
+    radial-gradient(60% 40% at 50% 104%, color-mix(in srgb, var(--yellow) 5%, transparent), transparent 72%);
+}
+:root[data-theme="dark"] body::before { opacity: .55; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body::before { opacity: .55; }
+}
+/* Lift the content off the background wash. The nav is deliberately not in
+   this list: it is position: fixed with its own z-index, and naming it here
+   would override that and un-pin it from the top of the window. */
+main, .footer { position: relative; z-index: 2; }
+
+/* ---------- Nav: the one translucent surface ---------- */
+.nav {
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  transition: border-color .4s var(--ease-soft), background .4s var(--ease-soft);
+}
+.nav.scrolled { background: color-mix(in srgb, var(--bg) 86%, transparent); }
+.nav-links a::after { transition: width .4s var(--ease-out); }
+
+/* ---------- Surfaces ----------
+   Panels sit on the page with a lit edge and a shadow. No blur, no tint:
+   the material is the paper itself, lifted. */
+.editor-window,
+.terminal-window { box-shadow: var(--edge), var(--e3); }
+.hero-typer { box-shadow: var(--edge), var(--e2); }
+.timeline-logo,
+.quest-badge  { box-shadow: var(--edge), var(--e1); }
+.section-kicker { box-shadow: var(--edge); }
+
+/* ---------- Buttons ----------
+   A short travel and a shadow that grows with it, so the press reads as the
+   button coming toward you and going back down again. */
+.btn {
+  transition:
+    transform .32s var(--ease-out),
+    box-shadow .32s var(--ease-out),
+    background .25s var(--ease-soft),
+    border-color .25s var(--ease-soft),
+    color .25s var(--ease-soft);
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0) scale(.98); transition-duration: .12s; }
+.btn-primary { box-shadow: var(--e2); }
+.btn-primary:hover { box-shadow: var(--e3); }
+.btn-outline { box-shadow: var(--e1); }
+.btn-outline:hover { box-shadow: var(--e2); }
+
+.theme-toggle {
+  box-shadow: var(--e1);
+  transition: transform .32s var(--ease-out), box-shadow .32s var(--ease-out), border-color .25s;
+}
+.theme-toggle:hover { transform: translateY(-1px); box-shadow: var(--e2); }
+.theme-toggle:active { transform: scale(.94); transition-duration: .12s; }
+.theme-toggle svg { transition: transform .5s var(--ease-out); }
+.theme-toggle:hover svg { transform: rotate(30deg); }
+
+/* ---------- Timeline rows ----------
+   Hovering a row raises a plain, opaque panel behind it. Only its opacity
+   changes, so the hover is a compositor job rather than a repaint. */
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  inset: 4px -20px;
+  border-radius: 16px;
+  z-index: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: var(--bg-elevated);
+  box-shadow: var(--edge), var(--e2);
+  transition: opacity .35s var(--ease-soft);
+  will-change: opacity;
+}
+.timeline-item:hover::before { opacity: 1; }
+.timeline-content { position: relative; z-index: 1; min-width: 0; }
+
+/* The small rewards for hovering: the plate lifts a little, the date steps
+   out of grey, the external-link arrow leans in the direction it points. */
+.timeline-logo,
+.quest-badge {
+  transition: transform .4s var(--ease-out), box-shadow .4s var(--ease-out);
+}
+.timeline-item:hover .timeline-logo,
+.timeline-item:hover .quest-badge { transform: translateY(-2px); box-shadow: var(--edge), var(--e2); }
+
+.timeline-date { transition: color .3s var(--ease-soft); }
+.timeline-item:hover .timeline-date { color: var(--ink-soft); }
+
+.quest-ext {
+  display: inline-block;
+  transition: transform .35s var(--ease-out), color .25s var(--ease-soft);
+}
+.timeline-quests .timeline-content h3 a:hover .quest-ext { transform: translate(2px, -2px); }
+
+/* The rail fills in as the section scrolls past. Progressive enhancement:
+   where scroll-linked animation isn't supported the line is simply static,
+   and it never runs on the main thread where it is. */
+/* Both rails are drawn by pseudo-elements of .timeline, and ::after is its
+   last child — without an explicit order it would paint over the icon plates
+   that sit on the line. Making .timeline a stacking context and numbering the
+   two layers keeps the rail behind the rows for good. */
+.timeline { z-index: 0; }
+.timeline::before { z-index: 0; }
+.timeline-item { z-index: 1; }
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .timeline::before { background: var(--line); }
+    .timeline::after {
+      content: "";
+      position: absolute;
+      left: 27px;
+      top: 8px;
+      width: 1px;
+      height: calc(100% - 16px);
+      z-index: 0;
+      transform-origin: top;
+      background: linear-gradient(to bottom, var(--accent), var(--accent-2));
+      animation: rail-fill linear both;
+      animation-timeline: view();
+      animation-range: entry 90% exit 10%;
+    }
+    @keyframes rail-fill { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  }
+}
+
+/* ---------- Project badge ----------
+   Side quests are colour-coded by kind; a shipped project gets its own. */
+.quest-badge.quest-build {
+  background: color-mix(in srgb, var(--blue) 10%, var(--bg-elevated));
+  border-color: color-mix(in srgb, var(--blue) 28%, transparent);
+  color: var(--blue-ink);
+}
+
+/* ---------- Logo strip ---------- */
+.logo-strip-items img {
+  box-shadow: var(--e1);
+  transition: transform .4s var(--ease-out), opacity .3s var(--ease-soft),
+              box-shadow .4s var(--ease-out), border-color .3s;
+}
+.logo-strip-items img:hover { transform: translateY(-3px); box-shadow: var(--e2); }
+
+/* ---------- Hero ---------- */
+.hero-photo-wrap { overflow: hidden; }
+.hero-photo { transition: transform .9s var(--ease-out); }
+.hero-figure:hover .hero-photo { transform: scale(1.03); }
+.status-ok { color: var(--term-green); letter-spacing: .02em; }
+
+/* ---------- Tags ---------- */
+.tag { transition: transform .3s var(--ease-out), border-color .25s var(--ease-soft); }
+.tag:hover { transform: translateY(-1px); }
+
+/* ---------- The beat before the sign-off ----------
+   A hairline that fades out at both ends: a pause, not a divider. */
+.section-rule {
+  max-width: 1080px;
+  margin: 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line) 22%, var(--line) 78%, transparent);
+}
+
+/* Past the rule the side quests are finished, so the sign-off is given the
+   rest of the screen and centred in it — nothing else competes for attention.
+   svh rather than vh: on mobile the viewport shrinks as the browser chrome
+   retracts, and vh would leave the footer poking into the first paint. */
+.contact {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 15vh;
+  padding-bottom: 15vh;
+}
+.contact-inner { width: 100%; }
+
+/* ---------- Reveal ----------
+   A short lift and a fade. Two composited properties, one direction, and a
+   stagger small enough to read as a single movement down the page. */
+.reveal {
+  opacity: 0;
+  transform: translate3d(0, 16px, 0);
+  transition:
+    opacity .6s var(--ease-out),
+    transform .6s var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 45ms);
+}
+.reveal.in-view { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .btn:hover, .theme-toggle:hover, .tag:hover, .logo-strip-items img:hover,
+  .timeline-item:hover .timeline-logo, .timeline-item:hover .quest-badge,
+  .hero-figure:hover .hero-photo { transform: none; }
+}
+
+@media (max-width: 860px) {
+  .timeline-item::before { inset: 4px -14px; }
+  .contact { padding-top: 12vh; padding-bottom: 12vh; }
+}
+
+/* Short, wide windows: a full screen of padding would push the sign-off off
+   the bottom, so fall back to plain spacing. */
+@media (max-height: 620px) {
+  .contact { min-height: 0; padding-top: 100px; padding-bottom: 120px; }
+}
+
 /* ---------- Print ---------- */
 @media print {
-  .nav, .noise, .skip-link, .hero-actions, .contact-links, .theme-toggle { display: none !important; }
+  .nav, .noise, .skip-link, .hero-actions, .contact-links, .theme-toggle,
+  .section-rule { display: none !important; }
+  body::before, .timeline-item::before, .timeline::after { display: none !important; }
   .reveal { opacity: 1 !important; transform: none !important; }
   body { background: #fff; color: #000; font-size: 11pt; }
   .terminal-window, .editor-window, .hero-typer {
