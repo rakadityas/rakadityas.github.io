@@ -575,7 +575,9 @@ img { max-width: 100%; display: block; }
   color: var(--yellow-ink);
 }
 .quest-badge.quest-learn {
-  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  /* Mixed into the panel colour, not into `transparent`: every badge sits on
+     the rail, so a translucent plate lets the line show through it. */
+  background: color-mix(in srgb, var(--ink) 7%, var(--bg-elevated));
   border-color: color-mix(in srgb, var(--ink) 20%, transparent);
   color: var(--ink);
 }
@@ -883,34 +885,15 @@ img { max-width: 100%; display: block; }
 }
 
 /* ---------- Ground ----------
-   Two very faint washes in the page's own hues, fixed and static. It reads as
-   a tinted sheet of paper rather than a gradient; nothing animates, so this
-   costs one paint for the life of the page. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(58% 44% at 12% -4%,  color-mix(in srgb, var(--red) 6%, transparent), transparent 72%),
-    radial-gradient(54% 40% at 92% 6%,   color-mix(in srgb, var(--blue) 6%, transparent), transparent 72%),
-    radial-gradient(60% 40% at 50% 104%, color-mix(in srgb, var(--yellow) 5%, transparent), transparent 72%);
-}
-:root[data-theme="dark"] body::before { opacity: .55; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) body::before { opacity: .55; }
-}
-/* Lift the content off the background wash. The nav is deliberately not in
-   this list: it is position: fixed with its own z-index, and naming it here
-   would override that and un-pin it from the top of the window. */
-main, .footer { position: relative; z-index: 2; }
+   No fixed background layer: .noise and the nav's blur already cost a
+   full-screen composite each, and a third made scrolling work for nothing. */
+main, .footer { position: relative; }
 
 /* ---------- Nav: the one translucent surface ---------- */
 .nav {
   background: color-mix(in srgb, var(--bg) 72%, transparent);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(140%) blur(12px);
+  backdrop-filter: saturate(140%) blur(12px);
   transition: border-color .4s var(--ease-soft), background .4s var(--ease-soft);
 }
 .nav.scrolled { background: color-mix(in srgb, var(--bg) 86%, transparent); }
@@ -966,8 +949,7 @@ main, .footer { position: relative; z-index: 2; }
   pointer-events: none;
   background: var(--bg-elevated);
   box-shadow: var(--edge), var(--e2);
-  transition: opacity .35s var(--ease-soft);
-  will-change: opacity;
+  transition: opacity .3s var(--ease-soft);
 }
 .timeline-item:hover::before { opacity: 1; }
 .timeline-content { position: relative; z-index: 1; min-width: 0; }
@@ -993,34 +975,13 @@ main, .footer { position: relative; z-index: 2; }
 /* The rail fills in as the section scrolls past. Progressive enhancement:
    where scroll-linked animation isn't supported the line is simply static,
    and it never runs on the main thread where it is. */
-/* Both rails are drawn by pseudo-elements of .timeline, and ::after is its
-   last child — without an explicit order it would paint over the icon plates
-   that sit on the line. Making .timeline a stacking context and numbering the
-   two layers keeps the rail behind the rows for good. */
+/* The rail is a pseudo-element of .timeline and would otherwise paint over
+   the icon plates that sit on it, so the two layers are numbered explicitly.
+   (.quest-badge carries a z-index in the base rules, but it is position:
+   static, so that z-index never applied.) */
 .timeline { z-index: 0; }
 .timeline::before { z-index: 0; }
 .timeline-item { z-index: 1; }
-
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .timeline::before { background: var(--line); }
-    .timeline::after {
-      content: "";
-      position: absolute;
-      left: 27px;
-      top: 8px;
-      width: 1px;
-      height: calc(100% - 16px);
-      z-index: 0;
-      transform-origin: top;
-      background: linear-gradient(to bottom, var(--accent), var(--accent-2));
-      animation: rail-fill linear both;
-      animation-timeline: view();
-      animation-range: entry 90% exit 10%;
-    }
-    @keyframes rail-fill { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-  }
-}
 
 /* ---------- Project badge ----------
    Side quests are colour-coded by kind; a shipped project gets its own. */
@@ -1076,11 +1037,11 @@ main, .footer { position: relative; z-index: 2; }
    stagger small enough to read as a single movement down the page. */
 .reveal {
   opacity: 0;
-  transform: translate3d(0, 16px, 0);
+  transform: translate3d(0, 10px, 0);
   transition:
-    opacity .6s var(--ease-out),
-    transform .6s var(--ease-out);
-  transition-delay: calc(var(--i, 0) * 45ms);
+    opacity .34s var(--ease-out),
+    transform .34s var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 24ms);
 }
 .reveal.in-view { opacity: 1; transform: none; }
 
@@ -1106,7 +1067,7 @@ main, .footer { position: relative; z-index: 2; }
 @media print {
   .nav, .noise, .skip-link, .hero-actions, .contact-links, .theme-toggle,
   .section-rule { display: none !important; }
-  body::before, .timeline-item::before, .timeline::after { display: none !important; }
+  .timeline-item::before { display: none !important; }
   .reveal { opacity: 1 !important; transform: none !important; }
   body { background: #fff; color: #000; font-size: 11pt; }
   .terminal-window, .editor-window, .hero-typer {

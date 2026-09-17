@@ -191,7 +191,7 @@
       const parent = el.parentElement;
       const n = seen.get(parent) || 0;
       seen.set(parent, n + 1);
-      if (n) el.style.setProperty('--i', String(Math.min(n, 6)));
+      if (n) el.style.setProperty('--i', String(Math.min(n, 4)));
     });
   }
 
